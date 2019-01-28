@@ -1,0 +1,142 @@
+version: '3.1'
+
+services:
+  zoo1:
+    image: zookeeper
+    restart: always
+    hostname: zoo1
+    container_name: zoo1
+    ports:
+      - 2181:2181
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888 server.2=zoo2:2888:3888 server.3=zoo3:2888:3888
+    networks:
+      - zk_network
+
+  zoo2:
+    image: zookeeper
+    restart: always
+    hostname: zoo2
+    container_name: zoo2
+    ports:
+      - 2182:2181
+    environment:
+      ZOO_MY_ID: 2
+      ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=0.0.0.0:2888:3888 server.3=zoo3:2888:3888
+    networks:
+      - zk_network
+
+  zoo3:
+    image: zookeeper
+    restart: always
+    hostname: zoo3
+    container_name: zoo3
+    ports:
+      - 2183:2181
+    environment:
+      ZOO_MY_ID: 3
+      ZOO_SERVERS: server.1=zoo1:2888:3888 server.2=zoo2:2888:3888 server.3=0.0.0.0:2888:3888
+    networks:
+      - zk_network
+
+  storage:
+    build: ./storage
+    hostname: storage
+    container_name: storage
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: visitorsdb
+    networks:
+      - zk_network
+
+  storage-seeder:
+    build: ./storage-seeder
+    container_name: storage-seeder
+    command: sh -c './wait-for.sh storage:3306 -- ./seed.sh'
+    depends_on:
+      - storage
+    networks:
+      - zk_network
+
+  storage-service1:
+    build: ./storage-service
+    hostname: storage-service1
+    container_name: storage-service1
+    environment:
+      ZK_HOSTS: zoo1,zoo2,zoo3
+      DB_HOST: storage
+      DB_PORT: 3306
+      DB_NAME: visitorsdb
+      DB_USER: root
+      DB_PASS: password
+      SERVICE_PORT: 9000
+    command: sh -c './wait-for.sh storage:3306 -- python3 app.py'
+    depends_on:
+      - storage
+      - zoo1
+      - zoo2
+      - zoo3
+    networks:
+      - zk_network
+
+  storage-service2:
+    build: ./storage-service
+    hostname: storage-service2
+    container_name: storage-service2
+    environment:
+      ZK_HOSTS: zoo1,zoo2,zoo3
+      DB_HOST: storage
+      DB_PORT: 3306
+      DB_NAME: visitorsdb
+      DB_USER: root
+      DB_PASS: password
+      SERVICE_PORT: 9000
+    command: sh -c './wait-for.sh storage:3306 -- python3 app.py'
+    depends_on:
+      - storage
+      - zoo1
+      - zoo2
+      - zoo3
+    networks:
+      - zk_network
+
+  storage-service3:
+    build: ./storage-service
+    hostname: storage-service3
+    container_name: storage-service3
+    environment:
+      ZK_HOSTS: zoo1,zoo2,zoo3
+      DB_HOST: storage
+      DB_PORT: 3306
+      DB_NAME: visitorsdb
+      DB_USER: root
+      DB_PASS: password
+      SERVICE_PORT: 9000
+    command: sh -c './wait-for.sh storage:3306 -- python3 app.py'
+    depends_on:
+      - storage
+      - zoo1
+      - zoo2
+      - zoo3
+    networks:
+      - zk_network
+
+  analyzer:
+    build: ./analyzer
+    hostname: analyzer
+    container_name: analyzer
+    environment:
+      ZK_HOSTS: zoo1,zoo2,zoo3
+    depends_on:
+      - storage
+      - zoo1
+      - zoo2
+      - zoo3
+    networks:
+      - zk_network
+
+networks:
+  zk_network:
