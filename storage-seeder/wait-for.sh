@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# This is a helpful utility script, it waits for the specified host:port
+# pair to become available, and then exits. It is useful for controlling
+# Docker container start-up times and similar.
+# Downloaded from here: https://github.com/eficode/wait-for/blob/master/wait-for
+
 TIMEOUT=60
 QUIET=0
 
